@@ -201,7 +201,7 @@ const Timer = () => {
               {isNotificationPlaying && (
                 <div className="notification-indicator">
                   <FaVolumeUp className="notification-icon pulse" />
-                  <span>Playing Miku alarm... (13s)</span>
+                  <span>Playing alarm sound...</span>
                 </div>
               )}
             </div>
