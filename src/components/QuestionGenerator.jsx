@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FaRobot, FaSpinner, FaCog, FaSave, FaTimes, FaCheck, FaQuestion } from 'react-icons/fa';
 import aiService from '../services/AIService';
+import Modal from './Modal';
 import '../css/QuestionGenerator.css';
 
 const QuestionGenerator = ({ todo }) => {
@@ -124,25 +125,23 @@ const QuestionGenerator = ({ todo }) => {
     <div className="question-generator-container">
       <button
         className="question-generator-btn"
-        onClick={() => setShowGenerator(!showGenerator)}
+        onClick={() => setShowGenerator(true)}
         title="Generate Questions"
       >
         <FaQuestion />
       </button>
 
-      {showGenerator && (
-        <>
-          <div className="modal-overlay" onClick={() => setShowGenerator(false)}></div>
-          <div className="question-generator-modal">
-            <div className="question-generator-header">
-              <h3><FaRobot /> AI Question Generator</h3>
-              <button
-                className="close-btn"
-                onClick={() => setShowGenerator(false)}
-              >
-                <FaTimes />
-              </button>
-            </div>
+      <Modal isOpen={showGenerator} onClose={() => setShowGenerator(false)}>
+        <div className="question-generator-modal">
+          <div className="question-generator-header">
+            <h3><FaRobot /> AI Question Generator</h3>
+            <button
+              className="close-btn"
+              onClick={() => setShowGenerator(false)}
+            >
+              <FaTimes />
+            </button>
+          </div>
 
           <div className="question-generator-content">
             <div className="task-info">
@@ -268,8 +267,7 @@ const QuestionGenerator = ({ todo }) => {
             {renderQuestions()}
           </div>
         </div>
-        </>
-      )}
+      </Modal>
     </div>
   );
 };
