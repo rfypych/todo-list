@@ -1,7 +1,7 @@
 // AI Service for generating questions using OpenRouter API
 class AIService {
   constructor() {
-    this.apiKey = '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';
+    this.apiKey = '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';
     this.model = 'meta-llama/llama-4-maverick:free';
     this.baseUrl = 'https://openrouter.ai/api/v1/chat/completions';
   }
