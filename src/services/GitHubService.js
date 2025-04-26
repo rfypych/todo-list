@@ -50,6 +50,18 @@ class GitHubService {
     }
   }
 
+  // Base64 encode function for browser environment
+  _base64Encode(str) {
+    // Convert the string to UTF-8 bytes
+    const utf8Bytes = new TextEncoder().encode(str);
+    // Convert bytes to binary string
+    const binaryStr = Array.from(utf8Bytes)
+      .map(byte => String.fromCharCode(byte))
+      .join('');
+    // Encode to base64
+    return btoa(binaryStr);
+  }
+
   // Create a new file in the repository
   async createFile(path, content, message) {
     if (!this.isInitialized()) return false;
@@ -60,7 +72,7 @@ class GitHubService {
         repo: this.repo,
         path,
         message,
-        content: Buffer.from(content).toString('base64'),
+        content: this._base64Encode(content),
       });
 
       return true;
@@ -87,14 +99,14 @@ class GitHubService {
         repo: this.repo,
         path,
         message,
-        content: Buffer.from(content).toString('base64'),
+        content: this._base64Encode(content),
         sha: fileData.sha,
       });
 
       return true;
     } catch (error) {
       // If the file doesn't exist, create it
-      if (error.status === 404) {
+      if (error.status === 404 || (error.response && error.response.status === 404)) {
         return this.createFile(path, content, message);
       }
 
@@ -105,7 +117,13 @@ class GitHubService {
 
   // Make a commit when a task is completed
   async commitTaskCompletion(taskTitle) {
-    if (!this.isInitialized()) return false;
+    if (!this.isInitialized()) {
+      console.log('GitHub service not initialized');
+      return false;
+    }
+
+    console.log('Starting GitHub commit for task:', taskTitle);
+    console.log('Using repository:', this.user + '/' + this.repo);
 
     const today = new Date();
     const dateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
@@ -114,11 +132,27 @@ class GitHubService {
     const fileContent = `# Task Completed\n\nTask: ${taskTitle}\nCompleted at: ${today.toISOString()}\n`;
 
     try {
-      // Try to update the file first (if it exists)
-      const result = await this.updateFile(filePath, fileContent, commitMessage);
+      console.log('Creating/updating file:', filePath);
+
+      // Create the file directly instead of trying to update first
+      const result = await this.createFile(filePath, fileContent, commitMessage);
+
+      if (result) {
+        console.log('Successfully created GitHub contribution for task:', taskTitle);
+      } else {
+        console.log('Failed to create GitHub contribution');
+      }
+
       return result;
     } catch (error) {
       console.error('Error committing task completion:', error);
+
+      // Log more detailed error information
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      }
+
       return false;
     }
   }

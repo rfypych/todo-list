@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import githubService from '../services/GitHubService';
 
 export const TodoContext = createContext();
 
@@ -9,10 +10,10 @@ export const TodoProvider = ({ children }) => {
     const savedTodos = localStorage.getItem('todos');
     return savedTodos ? JSON.parse(savedTodos) : [];
   });
-  
+
   // Current selected todo for the timer
   const [currentTodo, setCurrentTodo] = useState(null);
-  
+
   // Dark mode state
   const [darkMode, setDarkMode] = useState(() => {
     const savedMode = localStorage.getItem('darkMode');
@@ -55,7 +56,7 @@ export const TodoProvider = ({ children }) => {
     setTodos(
       todos.map((todo) => (todo.id === id ? { ...todo, ...updatedTodo } : todo))
     );
-    
+
     // If the current todo is updated, update the current todo as well
     if (currentTodo && currentTodo.id === id) {
       setCurrentTodo({ ...currentTodo, ...updatedTodo });
@@ -65,7 +66,7 @@ export const TodoProvider = ({ children }) => {
   // Delete a todo
   const deleteTodo = (id) => {
     setTodos(todos.filter((todo) => todo.id !== id));
-    
+
     // If the current todo is deleted, set current todo to null
     if (currentTodo && currentTodo.id === id) {
       setCurrentTodo(null);
@@ -73,7 +74,18 @@ export const TodoProvider = ({ children }) => {
   };
 
   // Mark a todo as complete
-  const completeTodo = (id) => {
+  const completeTodo = async (id) => {
+    // Find the todo to complete
+    const todoToComplete = todos.find(todo => todo.id === id);
+
+    if (!todoToComplete) {
+      console.log('Todo not found:', id);
+      return;
+    }
+
+    console.log('Completing todo:', todoToComplete.title);
+
+    // Update the todo in state
     setTodos(
       todos.map((todo) =>
         todo.id === id
@@ -81,10 +93,27 @@ export const TodoProvider = ({ children }) => {
           : todo
       )
     );
-    
+
     // If the current todo is completed, set current todo to null
     if (currentTodo && currentTodo.id === id) {
       setCurrentTodo(null);
+    }
+
+    // Make a GitHub commit if GitHub integration is enabled
+    const isGitHubInitialized = githubService.isInitialized();
+    console.log('GitHub integration initialized:', isGitHubInitialized);
+
+    if (isGitHubInitialized) {
+      try {
+        const result = await githubService.commitTaskCompletion(todoToComplete.title);
+        if (result) {
+          console.log('GitHub contribution recorded for task:', todoToComplete.title);
+        } else {
+          console.log('Failed to record GitHub contribution for task:', todoToComplete.title);
+        }
+      } catch (error) {
+        console.error('Failed to record GitHub contribution:', error);
+      }
     }
   };
 
@@ -106,7 +135,7 @@ export const TodoProvider = ({ children }) => {
           : todo
       )
     );
-    
+
     // Update current todo if it's the one being updated
     if (currentTodo && currentTodo.id === id) {
       setCurrentTodo({
