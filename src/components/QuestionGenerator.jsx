@@ -37,6 +37,9 @@ const QuestionGenerator = ({ task }) => {
       console.log('Generating questions for task:', task.title);
       console.log('With options:', options);
 
+      // Add a small delay to ensure UI updates before API call
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const generatedQuestions = await geminiService.generateQuestions(task, options);
 
       if (generatedQuestions && generatedQuestions.length > 0) {
@@ -53,13 +56,19 @@ const QuestionGenerator = ({ task }) => {
       if (err.message && err.message.includes('API key')) {
         setError('Invalid API key. Please check your Gemini API key configuration.');
       } else if (err.message && err.message.includes('not found')) {
-        setError('The AI model could not be found. This might be due to an API version mismatch.');
+        setError('The AI model could not be found. Please try using a different model or check API configuration.');
       } else if (err.message && err.message.includes('network')) {
         setError('Network error. Please check your internet connection and try again.');
       } else if (err.message && err.message.includes('quota')) {
         setError('API quota exceeded. Please try again later.');
+      } else if (err.message && err.message.includes('permission')) {
+        setError('Permission denied. Your API key may not have access to this model.');
+      } else if (err.message && err.message.includes('blocked')) {
+        setError('Content blocked. The AI detected potentially harmful content in your request.');
+      } else if (err.message && err.message.includes('rate limit')) {
+        setError('Rate limit exceeded. Please wait a moment and try again.');
       } else {
-        setError('Failed to generate questions. Error: ' + (err.message || 'Unknown error'));
+        setError('Failed to generate questions. Please try again with a simpler task description.');
       }
     } finally {
       setIsGenerating(false);

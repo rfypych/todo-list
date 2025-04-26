@@ -1,13 +1,16 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Initialize the Gemini API with your API key
-const API_KEY = 'AIzaSyBMObbqp1Jy_v7i34FYywHYyMQ8WbkS6Pk';
+const API_KEY = 'AIzaSyAeNNz4Ub3Cp8guoO2gSExwlLRMV2a27Ds';
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 class GeminiService {
   constructor() {
-    // Use gemini-1.0-pro instead of gemini-pro (which is for v1beta)
-    this.model = genAI.getGenerativeModel({ model: 'gemini-1.0-pro' });
+    // Use gemini-pro model (the correct model name for the current API version)
+    this.model = genAI.getGenerativeModel({
+      model: 'gemini-pro',
+      apiVersion: 'v1' // Explicitly set API version to v1 instead of v1beta
+    });
   }
 
   /**
@@ -31,20 +34,63 @@ class GeminiService {
 
       // Prepare the content to analyze
       const content = `
-        Task Title: ${task.title || ''}
-        Task Description: ${task.description || ''}
-      `;
+Task Title: ${task.title || ''}
+Task Description: ${task.description || ''}
+      `.trim();
+
+      console.log('Preparing content for Gemini:', content);
 
       // Create the prompt for Gemini
       const prompt = this._createPrompt(content, numQuestions, difficulty, questionType, bloomLevel);
 
+      console.log('Sending request to Gemini API...');
+
+      // Generate content using Gemini with safety settings
+      const generationConfig = {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 2048,
+      };
+
+      const safetySettings = [
+        {
+          category: "HARM_CATEGORY_HARASSMENT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+          category: "HARM_CATEGORY_HATE_SPEECH",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        }
+      ];
+
       // Generate content using Gemini
-      const result = await this.model.generateContent(prompt);
+      const result = await this.model.generateContent({
+        contents: [prompt],
+        generationConfig,
+        safetySettings
+      });
+
+      console.log('Received response from Gemini API');
+
       const response = await result.response;
       const text = response.text();
 
+      console.log('Raw response text:', text.substring(0, 100) + '...');
+
       // Parse the response to extract questions
-      return this._parseQuestions(text, questionType);
+      const questions = this._parseQuestions(text, questionType);
+      console.log(`Successfully parsed ${questions.length} questions`);
+
+      return questions;
     } catch (error) {
       console.error('Error generating questions:', error);
       throw error;
@@ -56,83 +102,98 @@ class GeminiService {
    * @private
    */
   _createPrompt(content, numQuestions, difficulty, questionType, bloomLevel) {
-    let prompt = `
-      You are an educational question generator. Based on the following task content,
-      generate ${numQuestions} ${difficulty} level questions in ${questionType} format
-      that target the ${bloomLevel} level of Bloom's taxonomy.
+    // Create a more structured prompt that's easier for the model to follow
+    const prompt = {
+      role: "user",
+      parts: [
+        {
+          text: `You are an educational question generator. I need you to create ${numQuestions} ${difficulty} level questions in ${questionType} format that target the ${bloomLevel} level of Bloom's taxonomy.
 
-      ${content}
+The questions should be based on this content:
+${content}
 
-      Please format your response as follows:
-    `;
+Please follow these exact formatting rules:
 
-    // Add format instructions based on question type
-    switch (questionType) {
-      case 'multiple-choice':
-        prompt += `
-          Q1: [Question text]
-          A) [Option A]
-          B) [Option B]
-          C) [Option C]
-          D) [Option D]
-          Correct Answer: [Letter of correct option]
-          Explanation: [Brief explanation of the correct answer]
+${this._getFormatInstructions(questionType)}
 
-          Q2: ...
-        `;
-        break;
-      case 'essay':
-        prompt += `
-          Q1: [Question text]
-          Sample Answer: [Brief outline of what a good answer should include]
-
-          Q2: ...
-        `;
-        break;
-      case 'true-false':
-        prompt += `
-          Q1: [Statement]
-          Answer: [True/False]
-          Explanation: [Brief explanation of why the statement is true or false]
-
-          Q2: ...
-        `;
-        break;
-      case 'fill-in-blanks':
-        prompt += `
-          Q1: [Sentence with _____ for blank]
-          Answer: [Word or phrase that fills the blank]
-          Explanation: [Brief explanation of the answer]
-
-          Q2: ...
-        `;
-        break;
-      case 'matching':
-        prompt += `
-          Column A:
-          A1: [Item 1]
-          A2: [Item 2]
-          A3: [Item 3]
-
-          Column B:
-          B1: [Matching item for A1]
-          B2: [Matching item for A2]
-          B3: [Matching item for A3]
-
-          Correct Matches: A1-B1, A2-B2, A3-B3
-        `;
-        break;
-      default:
-        prompt += `
-          Q1: [Question text]
-          Answer: [Answer text]
-          Explanation: [Brief explanation]
-
-          Q2: ...
-        `;
-    }
+Important guidelines:
+- Create exactly ${numQuestions} questions
+- Make sure all questions are directly related to the content provided
+- Ensure questions are at ${difficulty} difficulty level
+- Target the ${bloomLevel} cognitive level from Bloom's taxonomy
+- Follow the exact format specified above
+- Make sure all answers are correct and explanations are clear
+- Do not include any additional text or explanations outside the question format`
+        }
+      ]
+    };
 
     return prompt;
+  },
+
+  /**
+   * Get format instructions based on question type
+   * @private
+   */
+  _getFormatInstructions(questionType) {
+    switch (questionType) {
+      case 'multiple-choice':
+        return `For multiple-choice questions:
+Q1: [Question text]
+A) [Option A]
+B) [Option B]
+C) [Option C]
+D) [Option D]
+Correct Answer: [Letter of correct option]
+Explanation: [Brief explanation of the correct answer]
+
+Q2: ...`;
+
+      case 'essay':
+        return `For essay questions:
+Q1: [Question text]
+Sample Answer: [Brief outline of what a good answer should include]
+
+Q2: ...`;
+
+      case 'true-false':
+        return `For true-false questions:
+Q1: [Statement]
+Answer: [True/False]
+Explanation: [Brief explanation of why the statement is true or false]
+
+Q2: ...`;
+
+      case 'fill-in-blanks':
+        return `For fill-in-the-blanks questions:
+Q1: [Sentence with _____ for blank]
+Answer: [Word or phrase that fills the blank]
+Explanation: [Brief explanation of the answer]
+
+Q2: ...`;
+
+      case 'matching':
+        return `For matching questions:
+Column A:
+A1: [Item 1]
+A2: [Item 2]
+A3: [Item 3]
+
+Column B:
+B1: [Matching item for A1]
+B2: [Matching item for A2]
+B3: [Matching item for A3]
+
+Correct Matches: A1-B1, A2-B2, A3-B3`;
+
+      default:
+        return `For general questions:
+Q1: [Question text]
+Answer: [Answer text]
+Explanation: [Brief explanation]
+
+Q2: ...`;
+    }
   }
 
   /**
