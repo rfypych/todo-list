@@ -27,7 +27,7 @@ class AIService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': \`Bearer \${this.apiKey}\`,
+          'Authorization': `Bearer ${this.apiKey}`,
           'HTTP-Referer': window.location.href, // Required by OpenRouter
           'X-Title': 'Todo List Question Generator' // Optional but helpful for OpenRouter
         },
@@ -45,7 +45,7 @@ class AIService {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Error from OpenRouter API:', errorData);
-        throw new Error(\`API error: \${response.status} \${errorData.error?.message || 'Unknown error'}\`);
+        throw new Error(`API error: ${response.status} ${errorData.error?.message || 'Unknown error'}`);
       }
 
       const data = await response.json();
@@ -114,47 +114,47 @@ class AIService {
         bloomDescription = 'testing comprehension and ability to explain ideas';
     }
 
-    return \`
-Generate \${numQuestions} \${difficulty} difficulty \${questionTypeDescription} about the following topic:
+    return `
+Generate ${numQuestions} ${difficulty} difficulty ${questionTypeDescription} about the following topic:
 
-Title: \${taskTitle}
-Description: \${taskDescription || 'No additional description provided.'}
+Title: ${taskTitle}
+Description: ${taskDescription || 'No additional description provided.'}
 
-The questions should be at the "\${bloomLevel}" level of Bloom's Taxonomy, \${bloomDescription}.
+The questions should be at the "${bloomLevel}" level of Bloom's Taxonomy, ${bloomDescription}.
 
 Format the output as follows:
 1. Question: [Question text]
-\${questionType === 'multiple_choice' ? 'A) [Option A]\\nB) [Option B]\\nC) [Option C]\\nD) [Option D]\\nCorrect Answer: [Letter]' : 
- questionType === 'true_false' ? 'True or False\\nCorrect Answer: [True/False]' : 
- questionType === 'fill_in_blanks' ? '[Question with _____ for blanks]\\nCorrect Answer: [Answer]' :
- questionType === 'matching' ? 'Column A:\\n1. [Item 1]\\n2. [Item 2]\\nColumn B:\\nA. [Match A]\\nB. [Match B]\\nCorrect Matches: 1-[Letter], 2-[Letter]' :
+${questionType === 'multiple_choice' ? 'A) [Option A]\nB) [Option B]\nC) [Option C]\nD) [Option D]\nCorrect Answer: [Letter]' :
+ questionType === 'true_false' ? 'True or False\nCorrect Answer: [True/False]' :
+ questionType === 'fill_in_blanks' ? '[Question with _____ for blanks]\nCorrect Answer: [Answer]' :
+ questionType === 'matching' ? 'Column A:\n1. [Item 1]\n2. [Item 2]\nColumn B:\nA. [Match A]\nB. [Match B]\nCorrect Matches: 1-[Letter], 2-[Letter]' :
  'Suggested Answer: [Brief outline of what a good answer would include]'}
 
 2. Question: [Question text]
 ...
 
 Please ensure the questions are directly relevant to the content, challenging but fair, and cover different aspects of the topic.
-\`;
+`;
   }
 
   // Parse the generated content into structured questions
   _parseQuestions(content, questionType) {
     // Split the content by question numbers (1., 2., etc.)
-    const questionBlocks = content.split(/\\d+\\.\\s+Question:/);
-    
+    const questionBlocks = content.split(/\d+\.\s+Question:/);
+
     // Remove the first element if it's empty or contains introductory text
     const questions = questionBlocks.slice(1).map(block => {
       const questionText = block.trim();
-      
+
       // Different parsing logic based on question type
       switch (questionType) {
         case 'multiple_choice': {
-          const questionParts = questionText.split(/\\n(?=[A-D]\\))/);
+          const questionParts = questionText.split(/\n(?=[A-D]\))/);
           const questionStatement = questionParts[0].trim();
-          
+
           const options = {};
           let correctAnswer = '';
-          
+
           // Extract options and correct answer
           questionParts.slice(1).forEach(part => {
             const match = part.match(/^([A-D])\)\s+(.+)$/);
@@ -162,13 +162,13 @@ Please ensure the questions are directly relevant to the content, challenging bu
               options[match[1]] = match[2].trim();
             }
           });
-          
+
           // Find the correct answer
           const correctMatch = questionText.match(/Correct Answer:\s+([A-D])/);
           if (correctMatch) {
             correctAnswer = correctMatch[1];
           }
-          
+
           return {
             type: 'multiple_choice',
             question: questionStatement,
@@ -176,61 +176,61 @@ Please ensure the questions are directly relevant to the content, challenging bu
             correctAnswer
           };
         }
-        
+
         case 'essay': {
-          const parts = questionText.split(/\\nSuggested Answer:/);
+          const parts = questionText.split(/\nSuggested Answer:/);
           return {
             type: 'essay',
             question: parts[0].trim(),
             suggestedAnswer: parts[1] ? parts[1].trim() : ''
           };
         }
-        
+
         case 'true_false': {
-          const parts = questionText.split(/\\nCorrect Answer:/);
+          const parts = questionText.split(/\nCorrect Answer:/);
           return {
             type: 'true_false',
             question: parts[0].replace(/True or False/, '').trim(),
             correctAnswer: parts[1] ? parts[1].trim() : ''
           };
         }
-        
+
         case 'fill_in_blanks': {
-          const parts = questionText.split(/\\nCorrect Answer:/);
+          const parts = questionText.split(/\nCorrect Answer:/);
           return {
             type: 'fill_in_blanks',
             question: parts[0].trim(),
             correctAnswer: parts[1] ? parts[1].trim() : ''
           };
         }
-        
+
         case 'matching': {
           const columnA = [];
           const columnB = [];
           const matches = {};
-          
+
           // Extract Column A
-          const columnAMatch = questionText.match(/Column A:(\\n[\\s\\S]*?)(?=Column B:)/);
+          const columnAMatch = questionText.match(/Column A:(\n[\s\S]*?)(?=Column B:)/);
           if (columnAMatch) {
-            columnAMatch[1].trim().split('\\n').forEach(item => {
+            columnAMatch[1].trim().split('\n').forEach(item => {
               const match = item.match(/(\d+)\.\s+(.+)/);
               if (match) {
                 columnA.push({ id: match[1], text: match[2].trim() });
               }
             });
           }
-          
+
           // Extract Column B
-          const columnBMatch = questionText.match(/Column B:(\\n[\\s\\S]*?)(?=Correct Matches:|$)/);
+          const columnBMatch = questionText.match(/Column B:(\n[\s\S]*?)(?=Correct Matches:|$)/);
           if (columnBMatch) {
-            columnBMatch[1].trim().split('\\n').forEach(item => {
+            columnBMatch[1].trim().split('\n').forEach(item => {
               const match = item.match(/([A-Z])\.\s+(.+)/);
               if (match) {
                 columnB.push({ id: match[1], text: match[2].trim() });
               }
             });
           }
-          
+
           // Extract Correct Matches
           const matchesMatch = questionText.match(/Correct Matches:\s+(.*)/);
           if (matchesMatch) {
@@ -241,7 +241,7 @@ Please ensure the questions are directly relevant to the content, challenging bu
               }
             });
           }
-          
+
           return {
             type: 'matching',
             columnA,
@@ -249,7 +249,7 @@ Please ensure the questions are directly relevant to the content, challenging bu
             correctMatches: matches
           };
         }
-        
+
         default:
           return {
             type: 'unknown',
@@ -257,7 +257,7 @@ Please ensure the questions are directly relevant to the content, challenging bu
           };
       }
     });
-    
+
     return questions;
   }
 }
