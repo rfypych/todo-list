@@ -1,360 +1,303 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
-  FaRobot, 
-  FaSpinner, 
-  FaCheck, 
-  FaTimes, 
+  FaQuestion, 
   FaCog, 
-  FaChevronDown, 
+  FaTimes, 
+  FaCheck, 
+  FaSpinner,
+  FaChevronDown,
   FaChevronUp,
-  FaQuestion,
-  FaLightbulb
+  FaPlus,
+  FaSave,
+  FaRedo
 } from 'react-icons/fa';
 import aiService from '../services/AIService';
 
-const QuestionGenerator = ({ task }) => {
+const QuestionGenerator = ({ taskContent, onClose }) => {
+  const [apiKey, setApiKey] = useState('');
+  const [isConfiguring, setIsConfiguring] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [questions, setQuestions] = useState([]);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showQuestions, setShowQuestions] = useState(true);
   
-  // Settings for question generation
-  const [settings, setSettings] = useState({
+  // Generation options
+  const [options, setOptions] = useState({
+    count: 3,
     difficulty: 'medium',
-    questionType: 'multiple_choice',
-    numQuestions: 3,
-    bloomLevel: 'understanding'
+    types: ['multiple-choice'],
+    language: 'en'
   });
   
-  // Handle settings change
-  const handleSettingChange = (setting, value) => {
-    setSettings({
-      ...settings,
-      [setting]: value
-    });
-  };
+  // Check if AI service is already initialized
+  useEffect(() => {
+    const savedApiKey = localStorage.getItem('ai_api_key');
+    if (savedApiKey) {
+      setApiKey(savedApiKey);
+      const initialized = aiService.init(savedApiKey);
+      setIsInitialized(initialized);
+    }
+  }, []);
   
-  // Generate questions
-  const generateQuestions = async () => {
-    if (!task || !task.title) {
-      setError('No task selected. Please select a task first.');
+  const handleSaveApiKey = () => {
+    setError('');
+    setSuccess('');
+    
+    if (!apiKey) {
+      setError('API key is required');
       return;
     }
     
+    const initialized = aiService.init(apiKey);
+    if (initialized) {
+      localStorage.setItem('ai_api_key', apiKey);
+      setIsInitialized(true);
+      setSuccess('API key saved successfully');
+      setIsConfiguring(false);
+    } else {
+      setError('Failed to initialize AI service with the provided API key');
+    }
+  };
+  
+  const handleGenerateQuestions = async () => {
+    setError('');
     setIsGenerating(true);
-    setError(null);
     
     try {
-      const result = await aiService.generateQuestions(
-        task.title,
-        task.description || '',
-        settings
-      );
+      const result = await aiService.generateQuestions(taskContent, options);
       
-      setQuestions(result.questions);
-      setShowQuestions(true);
+      if (result.success) {
+        setQuestions(result.questions);
+      } else {
+        setError(result.error || 'Failed to generate questions');
+      }
     } catch (error) {
-      console.error('Error generating questions:', error);
-      setError(error.message || 'Failed to generate questions. Please try again.');
+      setError('Error generating questions: ' + error.message);
     } finally {
       setIsGenerating(false);
     }
   };
   
-  // Render a multiple choice question
-  const renderMultipleChoiceQuestion = (question, index) => {
-    return (
-      <div className="question multiple-choice" key={index}>
-        <div className="question-header">
-          <span className="question-number">{index + 1}</span>
-          <div className="question-text">{question.question}</div>
-        </div>
-        <div className="question-options">
-          {Object.entries(question.options || {}).map(([key, value]) => (
-            <div 
-              className={`option ${question.correctAnswer === key ? 'correct' : ''}`} 
-              key={key}
-            >
-              <span className="option-letter">{key}</span>
-              <span className="option-text">{value}</span>
-              {question.correctAnswer === key && (
-                <span className="correct-indicator"><FaCheck /></span>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
+  const handleOptionChange = (key, value) => {
+    setOptions(prev => ({ ...prev, [key]: value }));
   };
   
-  // Render an essay question
-  const renderEssayQuestion = (question, index) => {
-    return (
-      <div className="question essay" key={index}>
-        <div className="question-header">
-          <span className="question-number">{index + 1}</span>
-          <div className="question-text">{question.question}</div>
-        </div>
-        {question.suggestedAnswer && (
-          <div className="suggested-answer">
-            <div className="suggested-answer-header">
-              <FaLightbulb /> Suggested Answer Elements:
-            </div>
-            <div className="suggested-answer-content">
-              {question.suggestedAnswer}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-  
-  // Render a true/false question
-  const renderTrueFalseQuestion = (question, index) => {
-    return (
-      <div className="question true-false" key={index}>
-        <div className="question-header">
-          <span className="question-number">{index + 1}</span>
-          <div className="question-text">{question.question}</div>
-        </div>
-        <div className="true-false-options">
-          <div className={`option ${question.correctAnswer === 'True' ? 'correct' : ''}`}>
-            <span className="option-text">True</span>
-            {question.correctAnswer === 'True' && (
-              <span className="correct-indicator"><FaCheck /></span>
-            )}
-          </div>
-          <div className={`option ${question.correctAnswer === 'False' ? 'correct' : ''}`}>
-            <span className="option-text">False</span>
-            {question.correctAnswer === 'False' && (
-              <span className="correct-indicator"><FaCheck /></span>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-  
-  // Render a fill-in-the-blanks question
-  const renderFillInBlanksQuestion = (question, index) => {
-    return (
-      <div className="question fill-in-blanks" key={index}>
-        <div className="question-header">
-          <span className="question-number">{index + 1}</span>
-          <div className="question-text">{question.question}</div>
-        </div>
-        <div className="answer">
-          <div className="answer-header">Answer:</div>
-          <div className="answer-content">{question.correctAnswer}</div>
-        </div>
-      </div>
-    );
-  };
-  
-  // Render a matching question
-  const renderMatchingQuestion = (question, index) => {
-    return (
-      <div className="question matching" key={index}>
-        <div className="question-header">
-          <span className="question-number">{index + 1}</span>
-          <div className="question-text">Match the items in Column A with Column B:</div>
-        </div>
-        <div className="matching-columns">
-          <div className="column column-a">
-            <div className="column-header">Column A</div>
-            {question.columnA && question.columnA.map(item => (
-              <div className="matching-item" key={item.id}>
-                <span className="item-id">{item.id}.</span>
-                <span className="item-text">{item.text}</span>
-              </div>
-            ))}
-          </div>
-          <div className="column column-b">
-            <div className="column-header">Column B</div>
-            {question.columnB && question.columnB.map(item => (
-              <div className="matching-item" key={item.id}>
-                <span className="item-id">{item.id}.</span>
-                <span className="item-text">{item.text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="matching-answers">
-          <div className="matching-answers-header">Correct Matches:</div>
-          <div className="matching-answers-content">
-            {question.correctMatches && Object.entries(question.correctMatches).map(([key, value]) => (
-              <div className="match" key={key}>
-                <span>{key} → {value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  };
-  
-  // Render a question based on its type
-  const renderQuestion = (question, index) => {
-    switch (question.type) {
-      case 'multiple_choice':
-        return renderMultipleChoiceQuestion(question, index);
-      case 'essay':
-        return renderEssayQuestion(question, index);
-      case 'true_false':
-        return renderTrueFalseQuestion(question, index);
-      case 'fill_in_blanks':
-        return renderFillInBlanksQuestion(question, index);
-      case 'matching':
-        return renderMatchingQuestion(question, index);
-      default:
-        return (
-          <div className="question unknown" key={index}>
-            <div className="question-header">
-              <span className="question-number">{index + 1}</span>
-              <div className="question-text">Unknown question type</div>
-            </div>
-            <pre>{JSON.stringify(question, null, 2)}</pre>
-          </div>
-        );
-    }
+  const handleTypeToggle = (type) => {
+    setOptions(prev => {
+      const types = [...prev.types];
+      const index = types.indexOf(type);
+      
+      if (index >= 0) {
+        // Remove if already exists and it's not the last type
+        if (types.length > 1) {
+          types.splice(index, 1);
+        }
+      } else {
+        // Add if doesn't exist
+        types.push(type);
+      }
+      
+      return { ...prev, types };
+    });
   };
   
   return (
     <div className="question-generator">
       <div className="question-generator-header">
-        <h3>
-          <FaRobot /> AI Question Generator
-          {task && <span className="for-task">for: {task.title}</span>}
-        </h3>
-        <div className="question-generator-actions">
-          <button 
-            className="settings-toggle"
-            onClick={() => setShowSettings(!showSettings)}
-            title="Settings"
-          >
-            <FaCog /> {showSettings ? <FaChevronUp /> : <FaChevronDown />}
-          </button>
-        </div>
+        <h3><FaQuestion /> AI Question Generator</h3>
+        <button className="close-btn" onClick={onClose}>
+          <FaTimes />
+        </button>
       </div>
       
-      {showSettings && (
-        <div className="question-generator-settings">
-          <div className="settings-grid">
-            <div className="setting">
-              <label htmlFor="difficulty">Difficulty:</label>
-              <select 
-                id="difficulty"
-                value={settings.difficulty}
-                onChange={(e) => handleSettingChange('difficulty', e.target.value)}
-              >
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
-              </select>
-            </div>
-            
-            <div className="setting">
-              <label htmlFor="questionType">Question Type:</label>
-              <select 
-                id="questionType"
-                value={settings.questionType}
-                onChange={(e) => handleSettingChange('questionType', e.target.value)}
-              >
-                <option value="multiple_choice">Multiple Choice</option>
-                <option value="essay">Essay</option>
-                <option value="true_false">True/False</option>
-                <option value="fill_in_blanks">Fill in the Blanks</option>
-                <option value="matching">Matching</option>
-              </select>
-            </div>
-            
-            <div className="setting">
-              <label htmlFor="numQuestions">Number of Questions:</label>
-              <select 
-                id="numQuestions"
-                value={settings.numQuestions}
-                onChange={(e) => handleSettingChange('numQuestions', parseInt(e.target.value))}
-              >
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="5">5</option>
-                <option value="10">10</option>
-              </select>
-            </div>
-            
-            <div className="setting">
-              <label htmlFor="bloomLevel">Bloom's Taxonomy Level:</label>
-              <select 
-                id="bloomLevel"
-                value={settings.bloomLevel}
-                onChange={(e) => handleSettingChange('bloomLevel', e.target.value)}
-              >
-                <option value="knowledge">Knowledge (Remembering)</option>
-                <option value="understanding">Understanding (Comprehending)</option>
-                <option value="application">Application (Applying)</option>
-                <option value="analysis">Analysis (Analyzing)</option>
-                <option value="synthesis">Synthesis (Creating)</option>
-                <option value="evaluation">Evaluation (Evaluating)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      )}
-      
       <div className="question-generator-content">
-        {!task ? (
-          <div className="no-task-selected">
-            <FaQuestion />
-            <p>Select a task to generate questions about its content.</p>
+        {!isInitialized ? (
+          <div className="ai-setup">
+            <p>
+              This feature uses AI to generate questions based on your task content.
+              Please provide your Hugging Face API key to continue.
+            </p>
+            
+            <div className="setting-group">
+              <label htmlFor="api-key">Hugging Face API Key:</label>
+              <input
+                type="password"
+                id="api-key"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="hf_..."
+              />
+              <small>
+                Get your API key from{' '}
+                <a 
+                  href="https://huggingface.co/settings/tokens" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                >
+                  Hugging Face Settings
+                </a>
+              </small>
+            </div>
+            
+            {error && <div className="error-message">{error}</div>}
+            {success && <div className="success-message">{success}</div>}
+            
+            <div className="ai-setup-actions">
+              <button className="save-btn" onClick={handleSaveApiKey}>
+                <FaCheck /> Save API Key
+              </button>
+            </div>
           </div>
         ) : (
-          <>
-            <div className="generate-button-container">
+          <div className="question-generator-main">
+            <div className="task-content-preview">
+              <h4>Task Content:</h4>
+              <p>{taskContent || 'No content available for this task.'}</p>
+            </div>
+            
+            <div className="generation-options">
+              <h4>
+                <button 
+                  className="toggle-btn"
+                  onClick={() => setIsConfiguring(!isConfiguring)}
+                >
+                  <FaCog /> Options {isConfiguring ? <FaChevronUp /> : <FaChevronDown />}
+                </button>
+              </h4>
+              
+              {isConfiguring && (
+                <div className="options-form">
+                  <div className="option-row">
+                    <label>Number of Questions:</label>
+                    <select 
+                      value={options.count} 
+                      onChange={(e) => handleOptionChange('count', parseInt(e.target.value))}
+                    >
+                      {[1, 2, 3, 5, 10].map(num => (
+                        <option key={num} value={num}>{num}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="option-row">
+                    <label>Difficulty:</label>
+                    <select 
+                      value={options.difficulty} 
+                      onChange={(e) => handleOptionChange('difficulty', e.target.value)}
+                    >
+                      <option value="easy">Easy</option>
+                      <option value="medium">Medium</option>
+                      <option value="hard">Hard</option>
+                    </select>
+                  </div>
+                  
+                  <div className="option-row">
+                    <label>Language:</label>
+                    <select 
+                      value={options.language} 
+                      onChange={(e) => handleOptionChange('language', e.target.value)}
+                    >
+                      <option value="en">English</option>
+                      <option value="id">Indonesian</option>
+                    </select>
+                  </div>
+                  
+                  <div className="option-row question-types">
+                    <label>Question Types:</label>
+                    <div className="type-toggles">
+                      {[
+                        { id: 'multiple-choice', label: 'Multiple Choice' },
+                        { id: 'essay', label: 'Essay' },
+                        { id: 'true-false', label: 'True/False' },
+                        { id: 'fill-in-blanks', label: 'Fill in Blanks' },
+                        { id: 'matching', label: 'Matching' }
+                      ].map(type => (
+                        <button
+                          key={type.id}
+                          className={`type-toggle ${options.types.includes(type.id) ? 'active' : ''}`}
+                          onClick={() => handleTypeToggle(type.id)}
+                        >
+                          {type.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="generation-actions">
               <button 
-                className="generate-button"
-                onClick={generateQuestions}
+                className="generate-btn" 
+                onClick={handleGenerateQuestions}
                 disabled={isGenerating}
               >
-                {isGenerating ? (
-                  <>
-                    <FaSpinner className="spinner" /> Generating Questions...
-                  </>
-                ) : (
-                  <>
-                    <FaRobot /> Generate Questions
-                  </>
-                )}
+                {isGenerating ? <FaSpinner className="spinner" /> : <FaPlus />} 
+                {isGenerating ? 'Generating...' : 'Generate Questions'}
+              </button>
+              
+              <button 
+                className="config-btn"
+                onClick={() => setIsConfiguring(!isConfiguring)}
+              >
+                <FaCog /> {isConfiguring ? 'Hide Options' : 'Show Options'}
               </button>
             </div>
             
-            {error && (
-              <div className="error-message">
-                <FaTimes /> {error}
-              </div>
-            )}
+            {error && <div className="error-message">{error}</div>}
             
             {questions.length > 0 && (
-              <div className="questions-container">
-                <div className="questions-header">
-                  <h4>Generated Questions</h4>
-                  <button 
-                    className="toggle-questions"
-                    onClick={() => setShowQuestions(!showQuestions)}
-                  >
-                    {showQuestions ? <FaChevronUp /> : <FaChevronDown />}
-                  </button>
+              <div className="generated-questions">
+                <h4>Generated Questions:</h4>
+                
+                <div className="questions-list">
+                  {questions.map((question, index) => (
+                    <div key={question.id} className="question-item">
+                      <div className="question-header">
+                        <span className="question-number">{index + 1}</span>
+                        <span className={`question-difficulty ${question.difficulty}`}>
+                          {question.difficulty.charAt(0).toUpperCase() + question.difficulty.slice(1)}
+                        </span>
+                        <span className="question-type">
+                          {question.type.split('-').map(word => 
+                            word.charAt(0).toUpperCase() + word.slice(1)
+                          ).join(' ')}
+                        </span>
+                      </div>
+                      
+                      <div className="question-content">
+                        <p>{question.question}</p>
+                        
+                        {question.type === 'multiple-choice' && question.options.length > 0 && (
+                          <div className="question-options">
+                            {question.options.map((option, optIndex) => (
+                              <div key={optIndex} className="option">
+                                {option}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
                 
-                {showQuestions && (
-                  <div className="questions-list">
-                    {questions.map((question, index) => renderQuestion(question, index))}
-                  </div>
-                )}
+                <div className="questions-actions">
+                  <button className="save-questions-btn">
+                    <FaSave /> Save Questions
+                  </button>
+                  <button 
+                    className="regenerate-btn"
+                    onClick={handleGenerateQuestions}
+                    disabled={isGenerating}
+                  >
+                    <FaRedo /> Regenerate
+                  </button>
+                </div>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>

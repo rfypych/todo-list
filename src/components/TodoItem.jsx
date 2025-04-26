@@ -1,17 +1,16 @@
 import { useState } from 'react';
 import { useTodo } from '../hooks/useTodo';
 import { formatDistanceToNow } from 'date-fns';
-import { FaEdit, FaTrash, FaCheck, FaPlay, FaClock, FaRobot } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaCheck, FaPlay, FaClock, FaQuestion } from 'react-icons/fa';
 import QuestionGenerator from './QuestionGenerator';
-import './QuestionGenerator.css';
 
 const TodoItem = ({ todo }) => {
   const { updateTodo, deleteTodo, completeTodo, startTodo, currentTodo } = useTodo();
   const [isEditing, setIsEditing] = useState(false);
+  const [showQuestionGenerator, setShowQuestionGenerator] = useState(false);
   const [editTitle, setEditTitle] = useState(todo.title);
   const [editDescription, setEditDescription] = useState(todo.description);
   const [editPriority, setEditPriority] = useState(todo.priority);
-  const [showQuestionGenerator, setShowQuestionGenerator] = useState(false);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -120,7 +119,7 @@ const TodoItem = ({ todo }) => {
   }
 
   return (
-    <div className={`todo-item-container ${showQuestionGenerator ? 'with-questions' : ''}`}>
+    <>
       <div className={`todo-item ${getPriorityClass()} ${isCurrentTodo ? 'current-todo' : ''} ${todo.status}`}>
         <div className="todo-content">
           <h3 className="todo-title">{todo.title}</h3>
@@ -159,25 +158,34 @@ const TodoItem = ({ todo }) => {
               </button>
             </>
           )}
-          <button
-            onClick={() => setShowQuestionGenerator(!showQuestionGenerator)}
-            className={`question-btn ${showQuestionGenerator ? 'active' : ''}`}
-            title="Generate questions from this task"
-          >
-            <FaRobot />
-          </button>
+          {/* Question Generator button - only show if task has content */}
+          {(todo.description || todo.title.length > 10) && (
+            <button
+              onClick={() => setShowQuestionGenerator(true)}
+              className="question-btn"
+              title="Generate questions from this task"
+            >
+              <FaQuestion />
+            </button>
+          )}
           <button onClick={() => deleteTodo(todo.id)} className="delete-btn" title="Delete task">
             <FaTrash />
           </button>
         </div>
       </div>
 
+      {/* Question Generator Modal */}
       {showQuestionGenerator && (
-        <div className="question-generator-wrapper">
-          <QuestionGenerator task={todo} />
+        <div className="modal-overlay">
+          <div className="modal-container">
+            <QuestionGenerator
+              taskContent={`${todo.title}${todo.description ? '\n\n' + todo.description : ''}`}
+              onClose={() => setShowQuestionGenerator(false)}
+            />
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 
