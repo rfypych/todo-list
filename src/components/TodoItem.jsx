@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useTodo } from '../hooks/useTodo';
 import { formatDistanceToNow } from 'date-fns';
-import { FaEdit, FaTrash, FaCheck, FaPlay, FaClock, FaQuestion } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaCheck, FaPlay, FaClock, FaRobot } from 'react-icons/fa';
 import QuestionGenerator from './QuestionGenerator';
+import './QuestionGenerator.css';
 
 const TodoItem = ({ todo }) => {
   const { updateTodo, deleteTodo, completeTodo, startTodo, currentTodo } = useTodo();
@@ -10,6 +11,7 @@ const TodoItem = ({ todo }) => {
   const [editTitle, setEditTitle] = useState(todo.title);
   const [editDescription, setEditDescription] = useState(todo.description);
   const [editPriority, setEditPriority] = useState(todo.priority);
+  const [showQuestionGenerator, setShowQuestionGenerator] = useState(false);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -118,49 +120,63 @@ const TodoItem = ({ todo }) => {
   }
 
   return (
-    <div className={`todo-item ${getPriorityClass()} ${isCurrentTodo ? 'current-todo' : ''} ${todo.status}`}>
-      <div className="todo-content">
-        <h3 className="todo-title">{todo.title}</h3>
-        {todo.description && <p className="todo-description">{todo.description}</p>}
-        <div className="todo-meta">
-          <span className="todo-created">
-            Created {formatDistanceToNow(new Date(todo.createdAt), { addSuffix: true })}
-          </span>
-          {todo.timeSpent > 0 && (
-            <span className="todo-time-spent">
-              <FaClock /> {formatTimeSpent(todo.timeSpent)}
+    <div className={`todo-item-container ${showQuestionGenerator ? 'with-questions' : ''}`}>
+      <div className={`todo-item ${getPriorityClass()} ${isCurrentTodo ? 'current-todo' : ''} ${todo.status}`}>
+        <div className="todo-content">
+          <h3 className="todo-title">{todo.title}</h3>
+          {todo.description && <p className="todo-description">{todo.description}</p>}
+          <div className="todo-meta">
+            <span className="todo-created">
+              Created {formatDistanceToNow(new Date(todo.createdAt), { addSuffix: true })}
             </span>
+            {todo.timeSpent > 0 && (
+              <span className="todo-time-spent">
+                <FaClock /> {formatTimeSpent(todo.timeSpent)}
+              </span>
+            )}
+            {todo.status === 'done' && todo.completedAt && (
+              <span className="todo-completed">
+                Completed {formatDistanceToNow(new Date(todo.completedAt), { addSuffix: true })}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="todo-actions">
+          {todo.status !== 'done' && (
+            <>
+              <button
+                onClick={() => startTodo(todo.id)}
+                className={`start-btn ${isCurrentTodo ? 'active' : ''}`}
+                title="Start working on this task"
+              >
+                <FaPlay />
+              </button>
+              <button onClick={handleEdit} className="edit-btn" title="Edit task">
+                <FaEdit />
+              </button>
+              <button onClick={() => completeTodo(todo.id)} className="complete-btn" title="Mark as complete">
+                <FaCheck />
+              </button>
+            </>
           )}
-          {todo.status === 'done' && todo.completedAt && (
-            <span className="todo-completed">
-              Completed {formatDistanceToNow(new Date(todo.completedAt), { addSuffix: true })}
-            </span>
-          )}
+          <button
+            onClick={() => setShowQuestionGenerator(!showQuestionGenerator)}
+            className={`question-btn ${showQuestionGenerator ? 'active' : ''}`}
+            title="Generate questions from this task"
+          >
+            <FaRobot />
+          </button>
+          <button onClick={() => deleteTodo(todo.id)} className="delete-btn" title="Delete task">
+            <FaTrash />
+          </button>
         </div>
       </div>
-      <div className="todo-actions">
-        {todo.status !== 'done' && (
-          <>
-            <button
-              onClick={() => startTodo(todo.id)}
-              className={`start-btn ${isCurrentTodo ? 'active' : ''}`}
-              title="Start working on this task"
-            >
-              <FaPlay />
-            </button>
-            <button onClick={handleEdit} className="edit-btn" title="Edit task">
-              <FaEdit />
-            </button>
-            <button onClick={() => completeTodo(todo.id)} className="complete-btn" title="Mark as complete">
-              <FaCheck />
-            </button>
-          </>
-        )}
-        <QuestionGenerator todo={todo} />
-        <button onClick={() => deleteTodo(todo.id)} className="delete-btn" title="Delete task">
-          <FaTrash />
-        </button>
-      </div>
+
+      {showQuestionGenerator && (
+        <div className="question-generator-wrapper">
+          <QuestionGenerator task={todo} />
+        </div>
+      )}
     </div>
   );
 };

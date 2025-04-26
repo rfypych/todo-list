@@ -1,260 +1,325 @@
-import { useState, useEffect } from 'react';
-import { FaRobot, FaSpinner, FaCog, FaSave, FaTimes, FaCheck, FaQuestion } from 'react-icons/fa';
+import { useState } from 'react';
+import { 
+  FaRobot, 
+  FaSpinner, 
+  FaCheck, 
+  FaTimes, 
+  FaCog, 
+  FaChevronDown, 
+  FaChevronUp,
+  FaQuestion,
+  FaLightbulb
+} from 'react-icons/fa';
 import aiService from '../services/AIService';
-import Modal from './Modal';
-import '../css/QuestionGenerator.css';
 
-const QuestionGenerator = ({ todo }) => {
-  const [showGenerator, setShowGenerator] = useState(false);
-  const [apiKey, setApiKey] = useState('');
+const QuestionGenerator = ({ task }) => {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showQuestions, setShowQuestions] = useState(true);
+  
+  // Settings for question generation
   const [settings, setSettings] = useState({
     difficulty: 'medium',
     questionType: 'multiple_choice',
     numQuestions: 3,
     bloomLevel: 'understanding'
   });
-
-  // Load saved API key on component mount
-  useEffect(() => {
-    // Use the provided API key or check for saved one
-    const defaultApiKey = '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';
-    const savedApiKey = localStorage.getItem('ai_api_key') || defaultApiKey;
-
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-      aiService.init(savedApiKey);
-    }
-  }, []);
-
-  const handleSettingsChange = (e) => {
-    const { name, value } = e.target;
-    setSettings(prev => ({
-      ...prev,
-      [name]: name === 'numQuestions' ? parseInt(value, 10) : value
-    }));
+  
+  // Handle settings change
+  const handleSettingChange = (setting, value) => {
+    setSettings({
+      ...settings,
+      [setting]: value
+    });
   };
-
-  const handleSaveApiKey = () => {
-    if (!apiKey) {
-      setError('API key is required');
+  
+  // Generate questions
+  const generateQuestions = async () => {
+    if (!task || !task.title) {
+      setError('No task selected. Please select a task first.');
       return;
     }
-
-    localStorage.setItem('ai_api_key', apiKey);
-    aiService.init(apiKey);
-    setSuccess('API key saved successfully');
-    setTimeout(() => setSuccess(''), 2000);
-  };
-
-  const handleGenerateQuestions = async () => {
-    if (!todo) {
-      setError('Please select a task first');
-      return;
-    }
-
-    if (!aiService.isInitialized()) {
-      setError('Please set your API key first');
-      return;
-    }
-
-    setError('');
+    
     setIsGenerating(true);
-
+    setError(null);
+    
     try {
-      const generatedQuestions = await aiService.generateQuestions(
-        todo.title,
-        todo.description,
+      const result = await aiService.generateQuestions(
+        task.title,
+        task.description || '',
         settings
       );
-      setQuestions(generatedQuestions);
-      setSuccess('Questions generated successfully');
-      setTimeout(() => setSuccess(''), 2000);
+      
+      setQuestions(result.questions);
+      setShowQuestions(true);
     } catch (error) {
-      setError(`Error generating questions: ${error.message}`);
+      console.error('Error generating questions:', error);
+      setError(error.message || 'Failed to generate questions. Please try again.');
     } finally {
       setIsGenerating(false);
     }
   };
-
-  const renderQuestions = () => {
-    if (questions.length === 0) {
-      return null;
-    }
-
+  
+  // Render a multiple choice question
+  const renderMultipleChoiceQuestion = (question, index) => {
     return (
-      <div className="generated-questions">
-        <h3>Generated Questions</h3>
-        {questions.map((question, index) => (
-          <div key={index} className="question-item">
-            <div className="question-number">Question {index + 1}</div>
-            {settings.questionType === 'multiple_choice' ? (
-              <>
-                <div className="question-text">{question.questionText}</div>
-                <div className="question-options">
-                  {question.options && question.options.map(option => (
-                    <div
-                      key={option.label}
-                      className={`option ${option.label === question.correctAnswer ? 'correct' : ''}`}
-                    >
-                      <span className="option-label">{option.label}.</span> {option.text}
-                      {option.label === question.correctAnswer && (
-                        <span className="correct-indicator"><FaCheck /></span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="question-content" dangerouslySetInnerHTML={{ __html: question.content.replace(/\\n/g, '<br>') }} />
-            )}
-          </div>
-        ))}
+      <div className="question multiple-choice" key={index}>
+        <div className="question-header">
+          <span className="question-number">{index + 1}</span>
+          <div className="question-text">{question.question}</div>
+        </div>
+        <div className="question-options">
+          {Object.entries(question.options || {}).map(([key, value]) => (
+            <div 
+              className={`option ${question.correctAnswer === key ? 'correct' : ''}`} 
+              key={key}
+            >
+              <span className="option-letter">{key}</span>
+              <span className="option-text">{value}</span>
+              {question.correctAnswer === key && (
+                <span className="correct-indicator"><FaCheck /></span>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     );
   };
-
-  if (!todo) {
-    return null;
-  }
-
-  return (
-    <div className="question-generator-container">
-      <button
-        className="question-generator-btn"
-        onClick={() => setShowGenerator(true)}
-        title="Generate Questions"
-      >
-        <FaQuestion />
-      </button>
-
-      <Modal isOpen={showGenerator} onClose={() => setShowGenerator(false)}>
-        <div className="question-generator-modal">
-          <div className="question-generator-header">
-            <h3><FaRobot /> AI Question Generator</h3>
-            <button
-              className="close-btn"
-              onClick={() => setShowGenerator(false)}
-            >
-              <FaTimes />
-            </button>
+  
+  // Render an essay question
+  const renderEssayQuestion = (question, index) => {
+    return (
+      <div className="question essay" key={index}>
+        <div className="question-header">
+          <span className="question-number">{index + 1}</span>
+          <div className="question-text">{question.question}</div>
+        </div>
+        {question.suggestedAnswer && (
+          <div className="suggested-answer">
+            <div className="suggested-answer-header">
+              <FaLightbulb /> Suggested Answer Elements:
+            </div>
+            <div className="suggested-answer-content">
+              {question.suggestedAnswer}
+            </div>
           </div>
-
-          <div className="question-generator-content">
-            <div className="task-info">
-              <h4>Generating questions for:</h4>
-              <div className="task-title">{todo.title}</div>
-              {todo.description && (
-                <div className="task-description">{todo.description}</div>
-              )}
-            </div>
-
-            <div className="api-key-section">
-              <label htmlFor="api-key">OpenRouter API Key:</label>
-              <div className="api-key-input-group">
-                <input
-                  type="password"
-                  id="api-key"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Enter your OpenRouter API key"
-                />
-                <button
-                  className="save-api-key-btn"
-                  onClick={handleSaveApiKey}
-                >
-                  <FaSave />
-                </button>
+        )}
+      </div>
+    );
+  };
+  
+  // Render a true/false question
+  const renderTrueFalseQuestion = (question, index) => {
+    return (
+      <div className="question true-false" key={index}>
+        <div className="question-header">
+          <span className="question-number">{index + 1}</span>
+          <div className="question-text">{question.question}</div>
+        </div>
+        <div className="true-false-options">
+          <div className={`option ${question.correctAnswer === 'True' ? 'correct' : ''}`}>
+            <span className="option-text">True</span>
+            {question.correctAnswer === 'True' && (
+              <span className="correct-indicator"><FaCheck /></span>
+            )}
+          </div>
+          <div className={`option ${question.correctAnswer === 'False' ? 'correct' : ''}`}>
+            <span className="option-text">False</span>
+            {question.correctAnswer === 'False' && (
+              <span className="correct-indicator"><FaCheck /></span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  // Render a fill-in-the-blanks question
+  const renderFillInBlanksQuestion = (question, index) => {
+    return (
+      <div className="question fill-in-blanks" key={index}>
+        <div className="question-header">
+          <span className="question-number">{index + 1}</span>
+          <div className="question-text">{question.question}</div>
+        </div>
+        <div className="answer">
+          <div className="answer-header">Answer:</div>
+          <div className="answer-content">{question.correctAnswer}</div>
+        </div>
+      </div>
+    );
+  };
+  
+  // Render a matching question
+  const renderMatchingQuestion = (question, index) => {
+    return (
+      <div className="question matching" key={index}>
+        <div className="question-header">
+          <span className="question-number">{index + 1}</span>
+          <div className="question-text">Match the items in Column A with Column B:</div>
+        </div>
+        <div className="matching-columns">
+          <div className="column column-a">
+            <div className="column-header">Column A</div>
+            {question.columnA && question.columnA.map(item => (
+              <div className="matching-item" key={item.id}>
+                <span className="item-id">{item.id}.</span>
+                <span className="item-text">{item.text}</span>
               </div>
-              <small>
-                Using model: deepseek/deepseek-chat-v3-0324:free
-              </small>
-            </div>
-
-            <div className="generator-settings">
-              <h4><FaCog /> Question Settings</h4>
-
-              <div className="settings-grid">
-                <div className="setting-group">
-                  <label htmlFor="difficulty">Difficulty:</label>
-                  <select
-                    id="difficulty"
-                    name="difficulty"
-                    value={settings.difficulty}
-                    onChange={handleSettingsChange}
-                  >
-                    <option value="easy">Easy</option>
-                    <option value="medium">Medium</option>
-                    <option value="hard">Hard</option>
-                  </select>
-                </div>
-
-                <div className="setting-group">
-                  <label htmlFor="questionType">Question Type:</label>
-                  <select
-                    id="questionType"
-                    name="questionType"
-                    value={settings.questionType}
-                    onChange={handleSettingsChange}
-                  >
-                    <option value="multiple_choice">Multiple Choice</option>
-                    <option value="true_false">True/False</option>
-                    <option value="fill_in_blank">Fill in the Blank</option>
-                    <option value="short_answer">Short Answer</option>
-                    <option value="essay">Essay</option>
-                  </select>
-                </div>
-
-                <div className="setting-group">
-                  <label htmlFor="numQuestions">Number of Questions:</label>
-                  <select
-                    id="numQuestions"
-                    name="numQuestions"
-                    value={settings.numQuestions}
-                    onChange={handleSettingsChange}
-                  >
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="5">5</option>
-                    <option value="10">10</option>
-                  </select>
-                </div>
-
-                <div className="setting-group">
-                  <label htmlFor="bloomLevel">Bloom's Taxonomy Level:</label>
-                  <select
-                    id="bloomLevel"
-                    name="bloomLevel"
-                    value={settings.bloomLevel}
-                    onChange={handleSettingsChange}
-                  >
-                    <option value="knowledge">Knowledge (Remembering)</option>
-                    <option value="understanding">Understanding (Comprehension)</option>
-                    <option value="application">Application</option>
-                    <option value="analysis">Analysis</option>
-                    <option value="evaluation">Evaluation</option>
-                    <option value="creation">Creation (Synthesis)</option>
-                  </select>
-                </div>
+            ))}
+          </div>
+          <div className="column column-b">
+            <div className="column-header">Column B</div>
+            {question.columnB && question.columnB.map(item => (
+              <div className="matching-item" key={item.id}>
+                <span className="item-id">{item.id}.</span>
+                <span className="item-text">{item.text}</span>
               </div>
+            ))}
+          </div>
+        </div>
+        <div className="matching-answers">
+          <div className="matching-answers-header">Correct Matches:</div>
+          <div className="matching-answers-content">
+            {question.correctMatches && Object.entries(question.correctMatches).map(([key, value]) => (
+              <div className="match" key={key}>
+                <span>{key} → {value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  // Render a question based on its type
+  const renderQuestion = (question, index) => {
+    switch (question.type) {
+      case 'multiple_choice':
+        return renderMultipleChoiceQuestion(question, index);
+      case 'essay':
+        return renderEssayQuestion(question, index);
+      case 'true_false':
+        return renderTrueFalseQuestion(question, index);
+      case 'fill_in_blanks':
+        return renderFillInBlanksQuestion(question, index);
+      case 'matching':
+        return renderMatchingQuestion(question, index);
+      default:
+        return (
+          <div className="question unknown" key={index}>
+            <div className="question-header">
+              <span className="question-number">{index + 1}</span>
+              <div className="question-text">Unknown question type</div>
             </div>
-
-            {error && <div className="error-message">{error}</div>}
-            {success && <div className="success-message">{success}</div>}
-
-            <div className="generator-actions">
-              <button
-                className="generate-btn"
-                onClick={handleGenerateQuestions}
+            <pre>{JSON.stringify(question, null, 2)}</pre>
+          </div>
+        );
+    }
+  };
+  
+  return (
+    <div className="question-generator">
+      <div className="question-generator-header">
+        <h3>
+          <FaRobot /> AI Question Generator
+          {task && <span className="for-task">for: {task.title}</span>}
+        </h3>
+        <div className="question-generator-actions">
+          <button 
+            className="settings-toggle"
+            onClick={() => setShowSettings(!showSettings)}
+            title="Settings"
+          >
+            <FaCog /> {showSettings ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+        </div>
+      </div>
+      
+      {showSettings && (
+        <div className="question-generator-settings">
+          <div className="settings-grid">
+            <div className="setting">
+              <label htmlFor="difficulty">Difficulty:</label>
+              <select 
+                id="difficulty"
+                value={settings.difficulty}
+                onChange={(e) => handleSettingChange('difficulty', e.target.value)}
+              >
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+            </div>
+            
+            <div className="setting">
+              <label htmlFor="questionType">Question Type:</label>
+              <select 
+                id="questionType"
+                value={settings.questionType}
+                onChange={(e) => handleSettingChange('questionType', e.target.value)}
+              >
+                <option value="multiple_choice">Multiple Choice</option>
+                <option value="essay">Essay</option>
+                <option value="true_false">True/False</option>
+                <option value="fill_in_blanks">Fill in the Blanks</option>
+                <option value="matching">Matching</option>
+              </select>
+            </div>
+            
+            <div className="setting">
+              <label htmlFor="numQuestions">Number of Questions:</label>
+              <select 
+                id="numQuestions"
+                value={settings.numQuestions}
+                onChange={(e) => handleSettingChange('numQuestions', parseInt(e.target.value))}
+              >
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="5">5</option>
+                <option value="10">10</option>
+              </select>
+            </div>
+            
+            <div className="setting">
+              <label htmlFor="bloomLevel">Bloom's Taxonomy Level:</label>
+              <select 
+                id="bloomLevel"
+                value={settings.bloomLevel}
+                onChange={(e) => handleSettingChange('bloomLevel', e.target.value)}
+              >
+                <option value="knowledge">Knowledge (Remembering)</option>
+                <option value="understanding">Understanding (Comprehending)</option>
+                <option value="application">Application (Applying)</option>
+                <option value="analysis">Analysis (Analyzing)</option>
+                <option value="synthesis">Synthesis (Creating)</option>
+                <option value="evaluation">Evaluation (Evaluating)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <div className="question-generator-content">
+        {!task ? (
+          <div className="no-task-selected">
+            <FaQuestion />
+            <p>Select a task to generate questions about its content.</p>
+          </div>
+        ) : (
+          <>
+            <div className="generate-button-container">
+              <button 
+                className="generate-button"
+                onClick={generateQuestions}
                 disabled={isGenerating}
               >
                 {isGenerating ? (
                   <>
-                    <FaSpinner className="spinner" /> Generating...
+                    <FaSpinner className="spinner" /> Generating Questions...
                   </>
                 ) : (
                   <>
@@ -263,11 +328,35 @@ const QuestionGenerator = ({ todo }) => {
                 )}
               </button>
             </div>
-
-            {renderQuestions()}
-          </div>
-        </div>
-      </Modal>
+            
+            {error && (
+              <div className="error-message">
+                <FaTimes /> {error}
+              </div>
+            )}
+            
+            {questions.length > 0 && (
+              <div className="questions-container">
+                <div className="questions-header">
+                  <h4>Generated Questions</h4>
+                  <button 
+                    className="toggle-questions"
+                    onClick={() => setShowQuestions(!showQuestions)}
+                  >
+                    {showQuestions ? <FaChevronUp /> : <FaChevronDown />}
+                  </button>
+                </div>
+                
+                {showQuestions && (
+                  <div className="questions-list">
+                    {questions.map((question, index) => renderQuestion(question, index))}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 };
