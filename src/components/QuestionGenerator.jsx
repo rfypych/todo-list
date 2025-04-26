@@ -31,13 +31,36 @@ const QuestionGenerator = ({ task }) => {
 
     setIsGenerating(true);
     setError(null);
+    setQuestions([]);
 
     try {
+      console.log('Generating questions for task:', task.title);
+      console.log('With options:', options);
+
       const generatedQuestions = await geminiService.generateQuestions(task, options);
-      setQuestions(generatedQuestions);
+
+      if (generatedQuestions && generatedQuestions.length > 0) {
+        console.log('Successfully generated questions:', generatedQuestions);
+        setQuestions(generatedQuestions);
+      } else {
+        console.warn('No questions were generated');
+        setError('No questions could be generated. Try adding more details to your task or changing the options.');
+      }
     } catch (err) {
       console.error('Error generating questions:', err);
-      setError('Failed to generate questions. Please try again later.');
+
+      // Provide more specific error messages based on the error
+      if (err.message && err.message.includes('API key')) {
+        setError('Invalid API key. Please check your Gemini API key configuration.');
+      } else if (err.message && err.message.includes('not found')) {
+        setError('The AI model could not be found. This might be due to an API version mismatch.');
+      } else if (err.message && err.message.includes('network')) {
+        setError('Network error. Please check your internet connection and try again.');
+      } else if (err.message && err.message.includes('quota')) {
+        setError('API quota exceeded. Please try again later.');
+      } else {
+        setError('Failed to generate questions. Error: ' + (err.message || 'Unknown error'));
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -51,8 +74,8 @@ const QuestionGenerator = ({ task }) => {
             <div className="question-text">{question.question}</div>
             <div className="options">
               {Object.entries(question.options).map(([key, value]) => (
-                <div 
-                  className={`option ${key === question.correctAnswer ? 'correct' : ''}`} 
+                <div
+                  className={`option ${key === question.correctAnswer ? 'correct' : ''}`}
                   key={key}
                 >
                   <span className="option-letter">{key}</span>
@@ -177,16 +200,16 @@ const QuestionGenerator = ({ task }) => {
       {isOpen && (
         <div className="question-generator-content">
           <div className="options-bar">
-            <button 
-              className="options-toggle" 
+            <button
+              className="options-toggle"
               onClick={() => setShowOptions(!showOptions)}
             >
               {showOptions ? 'Hide Options' : 'Show Options'}
               {showOptions ? <FaChevronUp /> : <FaChevronDown />}
             </button>
 
-            <button 
-              className="generate-btn" 
+            <button
+              className="generate-btn"
               onClick={generateQuestions}
               disabled={isGenerating}
             >
@@ -199,9 +222,9 @@ const QuestionGenerator = ({ task }) => {
             <div className="generator-options">
               <div className="option-group">
                 <label htmlFor="numQuestions">Number of Questions:</label>
-                <select 
-                  id="numQuestions" 
-                  name="numQuestions" 
+                <select
+                  id="numQuestions"
+                  name="numQuestions"
                   value={options.numQuestions}
                   onChange={handleOptionChange}
                 >
@@ -213,9 +236,9 @@ const QuestionGenerator = ({ task }) => {
 
               <div className="option-group">
                 <label htmlFor="difficulty">Difficulty Level:</label>
-                <select 
-                  id="difficulty" 
-                  name="difficulty" 
+                <select
+                  id="difficulty"
+                  name="difficulty"
                   value={options.difficulty}
                   onChange={handleOptionChange}
                 >
@@ -227,9 +250,9 @@ const QuestionGenerator = ({ task }) => {
 
               <div className="option-group">
                 <label htmlFor="questionType">Question Type:</label>
-                <select 
-                  id="questionType" 
-                  name="questionType" 
+                <select
+                  id="questionType"
+                  name="questionType"
                   value={options.questionType}
                   onChange={handleOptionChange}
                 >
@@ -243,9 +266,9 @@ const QuestionGenerator = ({ task }) => {
 
               <div className="option-group">
                 <label htmlFor="bloomLevel">Bloom's Taxonomy Level:</label>
-                <select 
-                  id="bloomLevel" 
-                  name="bloomLevel" 
+                <select
+                  id="bloomLevel"
+                  name="bloomLevel"
                   value={options.bloomLevel}
                   onChange={handleOptionChange}
                 >

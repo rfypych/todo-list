@@ -6,7 +6,8 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 
 class GeminiService {
   constructor() {
-    this.model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    // Use gemini-1.0-pro instead of gemini-pro (which is for v1beta)
+    this.model = genAI.getGenerativeModel({ model: 'gemini-1.0-pro' });
   }
 
   /**
@@ -56,12 +57,12 @@ class GeminiService {
    */
   _createPrompt(content, numQuestions, difficulty, questionType, bloomLevel) {
     let prompt = `
-      You are an educational question generator. Based on the following task content, 
-      generate ${numQuestions} ${difficulty} level questions in ${questionType} format 
+      You are an educational question generator. Based on the following task content,
+      generate ${numQuestions} ${difficulty} level questions in ${questionType} format
       that target the ${bloomLevel} level of Bloom's taxonomy.
-      
+
       ${content}
-      
+
       Please format your response as follows:
     `;
 
@@ -141,7 +142,7 @@ class GeminiService {
   _parseQuestions(text, questionType) {
     // Split the text by question markers (Q1:, Q2:, etc.)
     const questionBlocks = text.split(/Q\d+:/);
-    
+
     // Remove the first element if it's empty or contains only the introduction
     if (questionBlocks[0].trim().length === 0 || !questionBlocks[0].includes('Answer')) {
       questionBlocks.shift();
@@ -156,7 +157,7 @@ class GeminiService {
         case 'multiple-choice':
           const options = {};
           const optionMatches = questionText.match(/([A-D])\) (.*?)(?=\n[A-D]\)|Correct Answer:|$)/gs);
-          
+
           if (optionMatches) {
             optionMatches.forEach(match => {
               const optionLetter = match.charAt(0);
@@ -179,7 +180,7 @@ class GeminiService {
 
         case 'essay':
           const sampleAnswerMatch = questionText.match(/Sample Answer: (.*?)(?=\n\n|$)/s);
-          
+
           return {
             id: `q${questionNumber}`,
             type: 'essay',
@@ -190,7 +191,7 @@ class GeminiService {
         case 'true-false':
           const tfAnswerMatch = questionText.match(/Answer: (True|False)/i);
           const tfExplanationMatch = questionText.match(/Explanation: (.*?)(?=\n\n|$)/s);
-          
+
           return {
             id: `q${questionNumber}`,
             type: 'true-false',
@@ -202,7 +203,7 @@ class GeminiService {
         case 'fill-in-blanks':
           const fibAnswerMatch = questionText.match(/Answer: (.*?)(?=\n|Explanation:|$)/s);
           const fibExplanationMatch = questionText.match(/Explanation: (.*?)(?=\n\n|$)/s);
-          
+
           return {
             id: `q${questionNumber}`,
             type: 'fill-in-blanks',
@@ -255,7 +256,7 @@ class GeminiService {
         default:
           const defaultAnswerMatch = questionText.match(/Answer: (.*?)(?=\n|Explanation:|$)/s);
           const defaultExplanationMatch = questionText.match(/Explanation: (.*?)(?=\n\n|$)/s);
-          
+
           return {
             id: `q${questionNumber}`,
             type: 'generic',

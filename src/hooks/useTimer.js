@@ -13,34 +13,39 @@ export const useTimer = () => {
 
   // Initialize audio for notification
   useEffect(() => {
-    audioRef.current = new Audio();
+    // Import audio files directly to ensure proper bundling with Vite
+    import('../assets/sounds/miku-alarm.mp3')
+      .then(audioModule => {
+        audioRef.current = new Audio();
+        audioRef.current.src = audioModule.default;
 
-    // Try to load the Miku alarm sound
-    try {
-      // Use the Miku alarm sound (13 seconds duration)
-      // Fix path to use relative import with Vite
-      const audioPath = new URL('../assets/sounds/miku-alarm.mp3', import.meta.url).href;
-      audioRef.current.src = audioPath;
+        console.log('Successfully loaded audio from:', audioModule.default);
 
-      // Preload the audio
-      audioRef.current.load();
+        // Add error handling for audio loading
+        audioRef.current.onerror = (e) => {
+          console.error('Error playing audio file:', e);
 
-      console.log('Trying to load audio from:', audioPath);
+          // Create a simple beep as fallback
+          try {
+            const fallbackAudio = new Audio();
+            fallbackAudio.src = 'data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU' + Array(1000).join('123');
+            audioRef.current = fallbackAudio;
+          } catch (fallbackError) {
+            console.error('Error creating fallback audio:', fallbackError);
+          }
+        };
+      })
+      .catch(error => {
+        console.error('Error importing audio file:', error);
 
-      // Add error handling for audio loading
-      audioRef.current.onerror = (e) => {
-        console.error('Error loading audio file:', e);
-        // Try fallback to notification sound
+        // Create a simple beep as fallback
         try {
-          audioRef.current.src = new URL('../assets/sounds/notification.mp3', import.meta.url).href;
-          audioRef.current.load();
+          audioRef.current = new Audio();
+          audioRef.current.src = 'data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU' + Array(1000).join('123');
         } catch (fallbackError) {
-          console.error('Error loading fallback audio:', fallbackError);
+          console.error('Error creating fallback audio:', fallbackError);
         }
-      };
-    } catch (error) {
-      console.error('Error setting up audio:', error);
-    }
+      });
   }, []);
 
   // Set initial timer duration based on timer type
