@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTodo } from '../hooks/useTodo';
 import { formatDistanceToNow } from 'date-fns';
-import { FaEdit, FaTrash, FaCheck, FaPlay, FaClock, FaLightbulb } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaCheck, FaPlay, FaClock, FaQuestion } from 'react-icons/fa';
 import QuestionGenerator from './QuestionGenerator';
 
 const TodoItem = ({ todo }) => {
@@ -137,11 +137,6 @@ const TodoItem = ({ todo }) => {
             </span>
           )}
         </div>
-
-        {/* Question Generator */}
-        {(todo.title || todo.description) && (
-          <QuestionGenerator task={todo} />
-        )}
       </div>
       <div className="todo-actions">
         {todo.status !== 'done' && (
@@ -161,6 +156,7 @@ const TodoItem = ({ todo }) => {
             </button>
           </>
         )}
+        <QuestionGenerator todo={todo} />
         <button onClick={() => deleteTodo(todo.id)} className="delete-btn" title="Delete task">
           <FaTrash />
         </button>
