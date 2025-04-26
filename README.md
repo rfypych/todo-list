@@ -48,8 +48,8 @@ A modern, feature-rich Todo List application with an integrated Pomodoro-style t
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/rfypych/todo-list.git
-cd todo-list
+git clone https://github.com/rfypych/my-todo-list.git
+cd my-todo-list
 ```
 
 2. Install dependencies:
