@@ -1,6 +1,6 @@
 # Todo List with Timer Setter
 
-A modern, feature-rich Todo List application with an integrated Pomodoro-style timer to help you manage tasks and boost productivity.
+A modern, feature-rich Todo List application with an integrated Pomodoro-style timer to help you manage tasks and boost productivity. Now with GitHub integration to track your completed tasks as contributions!
 
 ![Todo List with Timer Setter](https://i.imgur.com/YourScreenshotHere.png)
 
@@ -27,6 +27,7 @@ A modern, feature-rich Todo List application with an integrated Pomodoro-style t
 - Productivity statistics
 - Time tracking for tasks
 - Visual indicators for task priority and status
+- GitHub integration to track completed tasks as contributions
 
 ## Technologies Used
 
@@ -35,6 +36,7 @@ A modern, feature-rich Todo List application with an integrated Pomodoro-style t
 - React Icons
 - Date-fns
 - UUID
+- Octokit (GitHub API)
 - CSS3 with custom properties (variables)
 - LocalStorage for data persistence
 
@@ -91,6 +93,14 @@ yarn dev
 
 ### Dark Mode
 - Click the sun/moon icon in the header to toggle between light and dark modes
+
+### GitHub Integration
+1. Click the GitHub icon in the header
+2. Enter your GitHub Personal Access Token (with 'repo' scope)
+3. Enter your repository name in the format `username/repo-name`
+4. Click "Connect"
+5. Now, each time you complete a task, a commit will be made to your GitHub repository
+6. These commits will appear in your GitHub contribution graph
 
 ## Customization
 
