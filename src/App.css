@@ -160,6 +160,12 @@ input:focus, textarea:focus, select:focus {
   font-size: 1.75rem;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .theme-toggle {
   background: rgba(255, 255, 255, 0.2);
   color: white;
@@ -177,6 +183,177 @@ input:focus, textarea:focus, select:focus {
 .theme-toggle:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: rotate(15deg);
+}
+
+/* GitHub Settings */
+.github-settings-container {
+  position: relative;
+}
+
+.github-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 1.2rem;
+  padding: 10px;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  position: relative;
+}
+
+.github-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.github-btn.connected {
+  background: rgba(40, 167, 69, 0.3);
+}
+
+.connected-indicator {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background-color: var(--success-color);
+  color: white;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  border: 2px solid var(--primary-color);
+}
+
+.github-settings-modal {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 350px;
+  background-color: var(--card-bg);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-hover);
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.github-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.github-settings-header h3 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.close-btn {
+  background: transparent;
+  color: white;
+  font-size: 1rem;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.github-settings-content {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.github-description {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.github-settings-content .setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.github-settings-content .setting-group label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.github-settings-content .setting-group small {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+.github-settings-content .setting-group small a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.github-settings-content .setting-group small a:hover {
+  text-decoration: underline;
+}
+
+.github-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.github-settings-actions .save-btn {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.github-settings-actions .disconnect-btn {
+  background-color: var(--secondary-color);
+  color: white;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.error-message {
+  color: var(--danger-color);
+  font-size: 0.9rem;
+  padding: 0.5rem;
+  background-color: rgba(220, 53, 69, 0.1);
+  border-radius: var(--border-radius-sm);
+  border-left: 3px solid var(--danger-color);
+}
+
+.success-message {
+  color: var(--success-color);
+  font-size: 0.9rem;
+  padding: 0.5rem;
+  background-color: rgba(40, 167, 69, 0.1);
+  border-radius: var(--border-radius-sm);
+  border-left: 3px solid var(--success-color);
 }
 
 .app-main {
